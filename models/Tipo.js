@@ -11,10 +11,6 @@ const tipoSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    fechaActualizacion: {
-        type: Date,
-        default: Date.now
-    },
     descripcion: {
         type: String,
         required: false

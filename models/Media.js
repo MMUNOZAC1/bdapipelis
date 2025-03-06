@@ -8,15 +8,15 @@ const mediaSchema = new mongoose.Schema({
         unique: true,
         required: true
     },
-    titulo: {
+    modelo: {
         type: String,
         required: true
     },
-    sinopsis: {
+    descripcion: {
         type: String,
         required: true
     },
-    url: {
+    color: {
         type: String,
         unique: true,
         required: true

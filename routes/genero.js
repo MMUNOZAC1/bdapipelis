@@ -1,28 +1,44 @@
-// routes/generoRoutes.js
+const express = require('express')
+const Genero = require('../models/Genero')
+const validator = require('express-validator')
 
-const express = require('express');
-const router = express.Router();
-const Genero = require('../models/Genero');
+const router = express.Router()
 
-// Crear un nuevo género
-router.post('/', async (req, res) => {
-    try {
-        const genero = new Genero(req.body);
-        await genero.save();
-        res.status(201).json(genero);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
+router.post('/', [
+  validator.check('nombre', 'nombre invalido').not().isEmpty(),
+  validator.check('estado', 'estado invalido').isIn(['Activo', 'Inactivo']),
+  validator.check('descripcion', 'descripcion invalido').not().isEmpty(),
+], async (req, res) => {
+  try {
+    const errors = validator.validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: errors.array()
+      })
     }
-});
 
-// Obtener todos los géneros
+    let genero = new Genero();
+    genero.nombre = req.body.nombre;
+    genero.estado = req.body.estado;
+    genero.descripcion = req.body.descripcion;
+
+
+    genero = await genero.save()
+    res.send(genero)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send('error en el servidor')
+  }
+})
+
 router.get('/', async (req, res) => {
-    try {
-        const generos = await Genero.find();
-        res.json(generos);
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
+  try {
+    const generos = await Genero.find()
+    res.send(generos)
+  } catch (error) {
+    console.log(error)
+    res.status(500).send('error en el servidor')
+  }
+})
 
 module.exports = router;

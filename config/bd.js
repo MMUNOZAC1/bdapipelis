@@ -1,18 +1,25 @@
-// config/db.js
-
 const mongoose = require('mongoose');
 
-const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect('mongodb://localhost:27017/yourdb', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
-    } catch (err) {
-        console.error(err);
-        process.exit(1);  // Sale del proceso con un código de error si falla la conexión
-    }
-};
 
-module.exports = connectDB;
+const getConnection = async () => {
+
+    try {
+        const url = 'mongodb://MMUNOZAC:asTb2aF7gyLBrAAM@cluster0-shard-00-00.h5puc.mongodb.net:27017,cluster0-shard-00-01.h5puc.mongodb.net:27017,cluster0-shard-00-02.h5puc.mongodb.net:27017/peliculas?ssl=true&replicaSet=atlas-12mq17-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster0';
+        
+        // 'mongodb+srv://usuarioiud:uuqacX6oJV0kVtE9@ac@test-cluster.8o3ccjs.mongodb.net/ing-web-inv?retryWrites=true&w=majority&appName=test-cluster'
+
+
+        await mongoose.connect(url);
+
+        console.log('conexion exitosa');
+
+    } catch(error) {
+        console.log(error);   
+    }
+}
+    
+    module.exports = {
+        getConnection,
+    }
+
+
