@@ -1,70 +1,138 @@
-const { Router } = require('express');
+const express = require('express');
+const router = express.Router();
 const Media = require('../models/Media');
-const { validationResult, check } = require('express-validator');
+const Genero = require('../models/Genero');
+const Director = require('../models/Director');
+const Productora = require('../models/Productora');
+const Tipo = require('../models/Tipo');
 
-const router = Router();
-
-router.post('/', [
-    check('serial', 'invalid.serial').not().isEmpty(),
-    check('modelo', 'invalid.modelo').not().isEmpty(),
-    check('descripcion', 'invalid.descripcion').not().isEmpty(),
-    check('color', 'invalid.color').not().isEmpty(),
-    check('imagenPortada', 'invalid.imagenPortada').not().isEmpty(),
-    check('fechaCreacion', 'invalid.fechaCreacion').not().isEmpty(),
-    check('fechaActualizacion', 'invalid.fechaActualizacion').not().isEmpty(),
-    check('añoEstreno', 'invalid.añoEstreno').not().isEmpty(),
-    check('generoPrincipal', 'invalid.generoPrincipal').not().isEmpty(),
-    check('directorPrincipal', 'invalid.directorPrincipal').not().isEmpty(),
-    check('productora', 'invalid.productora').not().isEmpty(),
-    check('tipo', 'invalid.tipo').not().isEmpty(),
-], async function(req, res) {
-    
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ message: errors.array() }); //CÓDIGOS DE ESTADO HTTP
-        }
-
-        const mediaExist = await Media.findOne({ email: req.body.email });
-        if (mediaExist) {
-            return res.status(400).send('Exist email');
-        }
-
-        let media = new Media();
-        media.serial = req.body.serial;
-        media.modelo = req.body.modelo;
-        media.descripcion = req.body.descripcion;
-        media.color = req.body.color;
-        media.imagenPortada = req.body.imagenPortada;
-        media.fechaCreacion = req.body.fechaCreacion;
-        media.fechaActualizacion = req.body.fechaActualizacion;
-        media.añoEstreno = req.body.añoEstreno;
-        media.generoPrincipal = req.body.generoPrincipal;
-        media.directorPrincipal = req.body.directorPrincipal;
-        media.productora = req.body.productora;
-        media.tipo = req.body.tipo;
-        media.createdAt = new Date();
-        media.updatedAt = new Date();
-
-        media = await media.save();
-        res.send(media)
-
-    } catch (error){
-        console.log(error);
-        res.status(500).send('message error')
-    }
-
-});
-
+// GET todos los medias
 router.get('/', async (req, res) => {
   try {
     const medias = await Media.find()
-    res.send(medias)
+      .populate('genero', 'nombre')
+      .populate('director', 'nombres')
+      .populate('productora', 'nombre')
+      .populate('tipo', 'nombre');
+    res.status(200).json(medias);
   } catch (error) {
-    console.log(error)
-    res.status(500).send('error en el servidor')
-    }
+    res.status(500).json({ message: error.message });
+  }
 });
 
+// GET un media por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const media = await Media.findById(req.params.id)
+      .populate('genero', 'nombre')
+      .populate('director', 'nombres')
+      .populate('productora', 'nombre')
+      .populate('tipo', 'nombre');
+    if (!media) return res.status(404).json({ message: 'Media no encontrado' });
+    res.status(200).json(media);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST crear un nuevo media
+router.post('/', async (req, res) => {
+  try {
+    // Verificar que los elementos relacionados existen y están activos
+    const genero = await Genero.findById(req.body.genero);
+    if (!genero || genero.estado !== 'Activo') {
+      return res.status(400).json({ message: 'El género no existe o no está activo' });
+    }
+
+    const director = await Director.findById(req.body.director);
+    if (!director || director.estado !== 'Activo') {
+      return res.status(400).json({ message: 'El director no existe o no está activo' });
+    }
+
+    const productora = await Productora.findById(req.body.productora);
+    if (!productora || productora.estado !== 'Activo') {
+      return res.status(400).json({ message: 'La productora no existe o no está activa' });
+    }
+
+    const tipo = await Tipo.findById(req.body.tipo);
+    if (!tipo) {
+      return res.status(400).json({ message: 'El tipo no existe' });
+    }
+
+    const nuevoMedia = new Media(req.body);
+    const mediaGuardado = await nuevoMedia.save();
+    
+    // Poblar los datos relacionados para la respuesta
+    const mediaCompleto = await Media.findById(mediaGuardado._id)
+      .populate('genero', 'nombre')
+      .populate('director', 'nombres')
+      .populate('productora', 'nombre')
+      .populate('tipo', 'nombre');
+    
+    res.status(201).json(mediaCompleto);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// PUT actualizar un media
+router.put('/:id', async (req, res) => {
+  try {
+    // Si se están actualizando las referencias, verificar que existen y están activos
+    if (req.body.genero) {
+      const genero = await Genero.findById(req.body.genero);
+      if (!genero || genero.estado !== 'Activo') {
+        return res.status(400).json({ message: 'El género no existe o no está activo' });
+      }
+    }
+
+    if (req.body.director) {
+      const director = await Director.findById(req.body.director);
+      if (!director || director.estado !== 'Activo') {
+        return res.status(400).json({ message: 'El director no existe o no está activo' });
+      }
+    }
+
+    if (req.body.productora) {
+      const productora = await Productora.findById(req.body.productora);
+      if (!productora || productora.estado !== 'Activo') {
+        return res.status(400).json({ message: 'La productora no existe o no está activa' });
+      }
+    }
+
+    if (req.body.tipo) {
+      const tipo = await Tipo.findById(req.body.tipo);
+      if (!tipo) {
+        return res.status(400).json({ message: 'El tipo no existe' });
+      }
+    }
+
+    req.body.fechaActualizacion = Date.now();
+    const mediaActualizado = await Media.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    ).populate('genero', 'nombre')
+      .populate('director', 'nombres')
+      .populate('productora', 'nombre')
+      .populate('tipo', 'nombre');
+
+    if (!mediaActualizado) return res.status(404).json({ message: 'Media no encontrado' });
+    res.status(200).json(mediaActualizado);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// DELETE un media
+router.delete('/:id', async (req, res) => {
+  try {
+    const mediaEliminado = await Media.findByIdAndDelete(req.params.id);
+    if (!mediaEliminado) return res.status(404).json({ message: 'Media no encontrado' });
+    res.status(200).json({ message: 'Media eliminado correctamente' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;

@@ -1,81 +1,64 @@
-const { Router } = require('express');
-const TipoModel = require('../models/Tipo');
-const { validationResult, check } = require('express-validator');
+const express = require('express');
+const router = express.Router();
+const Productora = require('../models/Productora');
 
-const router = Router();
-
-router.post('/', [
-    check('nombre', 'invalid.nombre').not().isEmpty().trim(),
-    check('descripcion', 'invalid.descripcion').not().isEmpty().trim(),
-    check('fechaCreacion', 'invalid.fechaCreacion').not().isEmpty()
-], async function(req, res) {
-    
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ message: errors.array() });
-        }
-
-        const nuevoTipo = new TipoModel({
-            nombre: req.body.nombre,
-            descripcion: req.body.descripcion,
-            fechaCreacion: req.body.fechaCreacion,
-            createdAt: new Date(),
-            updatedAt: new Date()
-        });
-
-        const tipoGuardado = await nuevoTipo.save();
-        res.status(201).json(tipoGuardado);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error servidor' });
-    }
+// GET todas las productoras
+router.get('/', async (req, res) => {
+  try {
+    const productoras = await Productora.find();
+    res.status(200).json(productoras);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
-router.get('/', async function(req, res) {
-    try {
-        const tipos = await TipoModel.find();
-        res.json(tipos);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error servidor' });
-    }
+// GET una productora por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const productora = await Productora.findById(req.params.id);
+    if (!productora) return res.status(404).json({ message: 'Productora no encontrada' });
+    res.status(200).json(productora);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 });
 
-router.put('/:id', [
-    check('nombre', 'invalid.nombre').not().isEmpty().trim(),
-    check('descripcion', 'invalid.descripcion').not().isEmpty().trim(),
-    check('fechaCreacion', 'invalid.fechaCreacion').not().isEmpty()
-], async function(req, res) {
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ message: errors.array() });
-        }
-
-        let tipo = await TipoModel.findById(req.params.id);
-        if (!tipo) {
-            return res.status(404).json({ message: 'Tipo no encontrado' });
-        }
-
-        tipo.nombre = req.body.nombre;
-        tipo.descripcion = req.body.descripcion;
-        tipo.fechaCreacion = req.body.fechaCreacion;
-        tipo.updatedAt = new Date();
-
-        tipo = await tipo.save();
-        res.json(tipo);
-
-    } catch (error) {
-        console.error(error);
-        if (error.kind === 'ObjectId') {
-            return res.status(400).json({ message: 'ID no válido' });
-        }
-        res.status(500).json({ message: 'Error servidor' });
-    }
+// POST crear una nueva productora
+router.post('/', async (req, res) => {
+  try {
+    const nuevaProductora = new Productora(req.body);
+    const productoraGuardada = await nuevaProductora.save();
+    res.status(201).json(productoraGuardada);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 });
 
+// PUT actualizar una productora
+router.put('/:id', async (req, res) => {
+  try {
+    req.body.fechaActualizacion = Date.now();
+    const productoraActualizada = await Productora.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!productoraActualizada) return res.status(404).json({ message: 'Productora no encontrada' });
+    res.status(200).json(productoraActualizada);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// DELETE una productora
+router.delete('/:id', async (req, res) => {
+  try {
+    const productoraEliminada = await Productora.findByIdAndDelete(req.params.id);
+    if (!productoraEliminada) return res.status(404).json({ message: 'Productora no encontrada' });
+    res.status(200).json({ message: 'Productora eliminada correctamente' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 module.exports = router;
