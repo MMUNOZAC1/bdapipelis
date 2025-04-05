@@ -1,63 +1,76 @@
 const express = require('express');
-const router = express.Router();
 const Productora = require('../models/Productora');
+const { check, validationResult } = require('express-validator');
 
-// GET todas las productoras
+const router = express.Router();
+
+router.post('/', [
+  check('nombre', 'nombre inválido').not().isEmpty(),
+  check('estado', 'estado inválido').isIn(['Activo', 'Inactivo']),
+  check('descripcion', 'descripción inválida').not().isEmpty()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array() });
+    }
+
+    const { nombre, estado, descripcion, slogan } = req.body;
+
+    const productora = new Productora({
+      nombre,
+      estado,
+      descripcion,
+      slogan
+    });
+
+    await productora.save();
+    res.status(201).json(productora);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error en el servidor');
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     const productoras = await Productora.find();
-    res.status(200).json(productoras);
+    res.json(productoras);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).send('Error en el servidor');
   }
 });
 
-// GET una productora por ID
-router.get('/:id', async (req, res) => {
+router.put('/:productoraid', [
+  check('nombre', 'nombre inválido').not().isEmpty(),
+  check('estado', 'estado inválido').isIn(['Activo', 'Inactivo']),
+  check('descripcion', 'descripción inválida').not().isEmpty()
+], async (req, res) => {
   try {
-    const productora = await Productora.findById(req.params.id);
-    if (!productora) return res.status(404).json({ message: 'Productora no encontrada' });
-    res.status(200).json(productora);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array() });
+    }
 
-// POST crear una nueva productora
-router.post('/', async (req, res) => {
-  try {
-    const nuevaProductora = new Productora(req.body);
-    const productoraGuardada = await nuevaProductora.save();
-    res.status(201).json(productoraGuardada);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+    const productora = await Productora.findById(req.params.productoraid);
+    if (!productora) {
+      return res.status(404).json({ mensaje: 'Productora no encontrada' });
+    }
 
-// PUT actualizar una productora
-router.put('/:id', async (req, res) => {
-  try {
-    req.body.fechaActualizacion = Date.now();
-    const productoraActualizada = await Productora.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
-    if (!productoraActualizada) return res.status(404).json({ message: 'Productora no encontrada' });
-    res.status(200).json(productoraActualizada);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+    const { nombre, estado, descripcion, slogan } = req.body;
 
-// DELETE una productora
-router.delete('/:id', async (req, res) => {
-  try {
-    const productoraEliminada = await Productora.findByIdAndDelete(req.params.id);
-    if (!productoraEliminada) return res.status(404).json({ message: 'Productora no encontrada' });
-    res.status(200).json({ message: 'Productora eliminada correctamente' });
+    productora.nombre = nombre;
+    productora.estado = estado;
+    productora.descripcion = descripcion;
+    productora.slogan = slogan;
+    productora.fechaActualizacion = new Date();
+
+    await productora.save();
+    res.json(productora);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(error);
+    res.status(500).send('Error en el servidor');
   }
 });
 

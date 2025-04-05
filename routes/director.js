@@ -1,64 +1,80 @@
-const express = require('express');
-const router = express.Router();
-const Director = require('../models/Director');
+const express = require('express')
+const Director = require('../models/Director')
+const { check, validationResult } = require('express-validator');
 
-// GET todos los directores
+const router = express.Router()
+
+router.post('/', [
+  check('nombres', 'nombre invalido').not().isEmpty(),
+  check('estado', 'estado invalido').isIn(['Activo', 'Inactivo'])
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: errors.array()
+      });
+    }
+
+    const director = new Director(req.body); // ← Automáticamente toma nombres y estado
+    const savedDirector = await director.save();
+
+    res.send(savedDirector);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('error en el servidor');
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
-    const directores = await Director.find();
-    res.status(200).json(directores);
+    const directores = await Director.find()
+    res.send(directores)
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.log(error)
+    res.status(500).send('error en el servidor')
   }
-});
+})
 
-// GET un director por ID
-router.get('/:id', async (req, res) => {
+router.get('/:nombre', async (req, res) => {
   try {
-    const director = await Director.findById(req.params.id);
-    if (!director) return res.status(404).json({ message: 'Director no encontrado' });
-    res.status(200).json(director);
+    const director = await Director.findOne({ nombre: req.params.nombre })
+    res.send(director)
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.log(error)
+    res.status(500).send('error en el servidor')
   }
-});
+})
 
-// POST crear un nuevo director
-router.post('/', async (req, res) => {
+router.put('/:nombre', [
+  check('nombre', 'nombre invalido').not().isEmpty(),
+  check('estado', 'estado invalido').isIn(['Activo', 'Inactivo']),
+  check('fechaCreacion', 'fechaCreacion invalido').not().isEmpty()
+], async (req, res) => {
   try {
-    const nuevoDirector = new Director(req.body);
-    const directorGuardado = await nuevoDirector.save();
-    res.status(201).json(directorGuardado);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-});
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: errors.array()
+      });
+    }
 
-// PUT actualizar un director
-router.put('/:id', async (req, res) => {
-  try {
-    req.body.fechaActualizacion = Date.now();
-    const directorActualizado = await Director.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    const director = await Director.findOneAndUpdate(
+      { nombre: req.params.nombre },
+      {
+        $set: {
+          nombre: req.body.nombre,
+          estado: req.body.estado,
+          fechaCreacion: req.body.fechaCreacion
+        }
+      },
       { new: true }
     );
-    if (!directorActualizado) return res.status(404).json({ message: 'Director no encontrado' });
-    res.status(200).json(directorActualizado);
+    res.send(director);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.log(error);
+    res.status(500).send('error en el servidor');
   }
 });
 
-// DELETE un director
-router.delete('/:id', async (req, res) => {
-  try {
-    const directorEliminado = await Director.findByIdAndDelete(req.params.id);
-    if (!directorEliminado) return res.status(404).json({ message: 'Director no encontrado' });
-    res.status(200).json({ message: 'Director eliminado correctamente' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-module.exports = router;
+module.exports = router

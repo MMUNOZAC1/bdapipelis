@@ -3,29 +3,23 @@ const mongoose = require('mongoose');
 const productoraSchema = new mongoose.Schema({
   nombre: {
     type: String,
-    required: [true, 'El nombre de la productora es obligatorio'],
-    unique: true
+    required: true,
+    unique: true // para evitar duplicados
   },
   estado: {
     type: String,
     enum: ['Activo', 'Inactivo'],
+    required: true,
     default: 'Activo'
-  },
-  fechaCreacion: {
-    type: Date,
-    default: Date.now
-  },
-  fechaActualizacion: {
-    type: Date,
-    default: Date.now
   },
   slogan: {
     type: String
   },
   descripcion: {
-    type: String,
-    required: [true, 'La descripción de la productora es obligatoria']
+    type: String
   }
+}, {
+  timestamps: { createdAt: 'fechaCreacion', updatedAt: 'fechaActualizacion' }
 });
 
 module.exports = mongoose.model('Productora', productoraSchema);
